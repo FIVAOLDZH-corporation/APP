@@ -1,0 +1,64 @@
+services:
+  postgres:
+    image: postgres:13
+    container_name: todo-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: todo_db
+      TZ: "Europe/Moscow"
+    ports:
+      - "5003:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - local-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
+      interval: 1s
+      timeout: 5s
+      retries: 5
+
+  migrate:
+    image: migrate/migrate
+    volumes:
+      - ./migrations/sql:/migrations
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - local-network
+    entrypoint: ["migrate", "-path=/migrations", "-database", "postgres://postgres:password@todo-postgres:5432/todo_db?sslmode=disable", "up"]
+
+  todo-service:
+    container_name: todoservice
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8003:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - local-network
+      - shared-network
+    environment:
+      DATABASE_HOST: todo-postgres
+      DATABASE_PORT: 5432
+      DATABASE_USER: postgres
+      DATABASE_PASSWORD: password
+      DATABASE_NAME: todo_db
+      DATABASE_SSLMODE: disable
+    volumes:
+      - ../config.toml:/app/config.toml
+      - ../logs:/app/logs
+    command: ["./main"]
+
+volumes:
+  postgres_data:
+
+networks:
+  local-network:
+  shared-network:
+    external: true
