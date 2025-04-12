@@ -124,8 +124,8 @@ func (r *SQLXUserRepository) GetUsersBatch(ctx context.Context, limit, offset in
 	}
 
 	users := make([]entity.User, len(repoUsers))
-	for i, u := range repoUsers {
-		users[i] = repository.UserToEntity(u)
+	for i := range repoUsers {
+		users[i] = repository.UserToEntity(repoUsers[i])
 	}
 
 	return users, nil
@@ -145,8 +145,8 @@ func (r *SQLXUserRepository) GetNewUsers(ctx context.Context, from time.Time, to
 	}
 
 	users := make([]entity.User, len(repoUsers))
-	for i, u := range repoUsers {
-		users[i] = repository.UserToEntity(u)
+	for i := range repoUsers {
+		users[i] = repository.UserToEntity(repoUsers[i])
 	}
 
 	return users, nil
