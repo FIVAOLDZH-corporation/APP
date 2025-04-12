@@ -1,0 +1,64 @@
+services:
+  postgres:
+    image: postgres:13
+    container_name: user-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: user_db
+      TZ: "Europe/Moscow"
+    ports:
+      - "5001:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - local-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
+      interval: 1s
+      timeout: 5s
+      retries: 5
+
+  migrate:
+    image: migrate/migrate
+    volumes:
+      - ./migrations/sql:/migrations
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - local-network
+    entrypoint: ["migrate", "-path=/migrations", "-database", "postgres://postgres:password@user-postgres:5432/user_db?sslmode=disable", "up"]
+
+  user-service:
+    container_name: user
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - local-network
+      - shared-network
+    environment:
+      DATABASE_HOST: user-postgres
+      DATABASE_PORT: 5432
+      DATABASE_USER: postgres
+      DATABASE_PASSWORD: password
+      DATABASE_NAME: user_db
+      DATABASE_SSLMODE: disable
+    volumes:
+      - ../config.toml:/app/config.toml
+      - ../logs:/app/logs
+    command: ["./main"]
+
+volumes:
+  postgres_data:
+
+networks:
+  local-network:
+  shared-network:
+    external: true
