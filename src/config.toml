@@ -1,0 +1,118 @@
+# ==================================
+# === Common Config ================
+# ==================================
+
+[log]
+path = "logs"
+level = "info"
+
+[pagination]
+limit = 100
+offset = 0
+
+# ==================================
+# === CLI Client ===================
+# ==================================
+
+[cli]
+path = "cli"
+container_name = "cli"
+tokens_path = "cli/tokens.json"
+
+[cli.log]
+path = "cli.log"
+
+# ==================================
+# === Aggregator Service ===========
+# ==================================
+
+[aggregator]
+path = "aggregator"
+container_name = "aggregator"
+base_url = "http://localhost:8000/api/v1"
+local_port = 8080
+exposed_port = 8000
+
+[aggregator.log]
+path = "aggregator.log"
+
+# ==================================
+# === User Service =================
+# ==================================
+
+[user]
+path = "user"
+container_name = "user"
+base_url = "api/v1"
+database = "postgres"
+local_port = 8080
+exposed_port = 8001
+
+[user.log]
+path = "user.log"
+
+[user.postgres]
+host = "user-postgres" # DB service name in docker-compose
+port = 5432
+user = "postgres"
+password = "password"
+dbname = "user_db"
+sslmode = "disable"
+
+[user.mongo]
+host = "user-mongo" # DB service name in docker-compose
+port = 27017
+user = "mongo_user"
+password = "password"
+dbname = "user_db"
+
+# ==================================
+# === Auth Service =================
+# ==================================
+
+[auth]
+path = "auth"
+container_name = "auth"
+base_url = "api/v1"
+database = "postgres"
+local_port = 8080
+exposed_port = 8002
+
+[auth.log]
+path = "auth.log"
+
+[auth.postgres]
+host = "auth-postgres" # DB service name in docker-compose
+port = 5432
+user = "postgres"
+password = "password"
+dbname = "auth_db"
+sslmode = "disable"
+
+[auth.token]
+secret = "secret"
+access_ttl_sec = 900 # 15*60
+refresh_ttl_sec = 604800 # 7*24*60*60
+
+# ==================================
+# === ToDo Service =================
+# ==================================
+
+[todo]
+path = "todo"
+container_name = "todo"
+base_url = "api/v1"
+database = "postgres"
+local_port = 8080
+exposed_port = 8003
+
+[todo.log]
+path = "todo.log"
+
+[todo.postgres]
+host = "todo-postgres" # DB service name in docker-compose
+port = 5432
+user = "postgres"
+password = "password"
+dbname = "todo_db"
+sslmode = "disable"
