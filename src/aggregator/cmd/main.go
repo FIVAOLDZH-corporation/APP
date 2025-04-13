@@ -59,7 +59,12 @@ func main() {
 		todoSvc = httpTodo.NewTodoService(baseURL, 2*time.Second, logger)
 	}
 
-	uc := v1.NewAggregatorUseCase(userSvc, authSvc, todoSvc, logger)
+	uc := v1.NewAggregatorUseCase(
+		userSvc,
+		authSvc,
+		todoSvc,
+		logger,
+	)
 	v1h := v1handler.NewAggregatorHandler(uc)
 	v2h := v2handler.NewAggregatorHandler(uc)
 
