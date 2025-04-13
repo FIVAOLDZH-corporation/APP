@@ -29,15 +29,17 @@ func NewZapLogger(config config.LogConfig) *ZapLogger {
 
 	consoleWriteSyncer := zapcore.AddSync(os.Stdout)
 
+	var dirPermissions = os.FileMode(0755)
 	dir := filepath.Dir(config.Path)
-	err := os.MkdirAll(dir, 0755)
+	err := os.MkdirAll(dir, dirPermissions)
 	if err != nil {
 		panic(err)
 	}
 
+	dirPermissions = os.FileMode(0644)
 	var fileWriteSyncer zapcore.WriteSyncer
 	if config.Path != "" {
-		logFile, err := os.OpenFile(config.Path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+		logFile, err := os.OpenFile(config.Path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, dirPermissions)
 		if err != nil {
 			panic(err)
 		}
