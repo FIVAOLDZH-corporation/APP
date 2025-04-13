@@ -23,7 +23,7 @@ func (r *SQLXTokenRepository) Save(ctx context.Context, token *entity.Token) err
 
 	query := `
         INSERT INTO tokens (id, user_id, token, created_at)
-		VALUES (:id, :user_id, :token, :created_at)
+		VALUES (:id, :user_id, :token, :created_at);
     `
 
 	_, err := r.db.NamedExecContext(ctx, query, repoToken)
@@ -35,7 +35,7 @@ func (r *SQLXTokenRepository) Save(ctx context.Context, token *entity.Token) err
 }
 
 func (r *SQLXTokenRepository) Delete(ctx context.Context, tokenID string) error {
-	query := `DELETE FROM tokens WHERE id = $1`
+	query := `DELETE FROM tokens WHERE id = $1;`
 
 	_, err := r.db.ExecContext(ctx, query, tokenID)
 	if err != nil {
@@ -46,7 +46,7 @@ func (r *SQLXTokenRepository) Delete(ctx context.Context, tokenID string) error 
 }
 
 func (r *SQLXTokenRepository) FindByToken(ctx context.Context, tokenValue string) (*entity.Token, error) {
-	query := `SELECT id, user_id, token, created_at FROM tokens WHERE token = $1`
+	query := `SELECT id, user_id, token, created_at FROM tokens WHERE token = $1;`
 
 	var repoToken repository.Token
 
