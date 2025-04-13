@@ -1,0 +1,52 @@
+services:
+  # PostgreSQL for User Service
+  user-postgres:
+    image: postgres:14
+    container_name: ${USER_POSTGRES_HOST}
+    environment:
+      POSTGRES_USER: ${USER_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${USER_POSTGRES_PASSWORD}
+      POSTGRES_DB: ${USER_POSTGRES_DBNAME}
+      TZ: "Europe/Moscow"
+    volumes:
+      - user-pgdata:/var/lib/postgresql/data
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
+      interval: 1s
+      timeout: 5s
+      retries: 5
+
+  # User Service Postgres
+  user:
+    build: ./${USER_PATH}
+    container_name: ${USER_CONTAINER_NAME}
+    ports:
+      - ${USER_EXPOSED_PORT}:${USER_LOCAL_PORT}
+    environment:
+      POSTGRES_URI: postgres://${USER_POSTGRES_USER}:${USER_POSTGRES_PASSWORD}@${USER_POSTGRES_HOST}:${USER_POSTGRES_PORT}/${USER_POSTGRES_DBNAME}
+    depends_on:
+      user-postgres:
+        condition: service_healthy
+    networks:
+      - backend
+    volumes:
+      - ./config.toml:/app/config.toml
+      - ./logs:/app/logs
+    restart: on-failure
+
+  user-migrate-postgres:
+    image: migrate/migrate
+    container_name: user-migrate-postgres
+    volumes:
+      - ./${USER_PATH}/migrations/sql:/migrations
+    depends_on:
+      user-postgres:
+        condition: service_healthy
+    networks:
+      - backend
+    entrypoint: ["migrate", "-path=/migrations", "-database", "postgres://${USER_POSTGRES_USER}:${USER_POSTGRES_PASSWORD}@${USER_POSTGRES_HOST}:${USER_POSTGRES_PORT}/${USER_POSTGRES_DBNAME}?sslmode=${USER_POSTGRES_SSLMODE}", "up"]
+
+volumes:
+  user-pgdata:

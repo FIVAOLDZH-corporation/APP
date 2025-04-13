@@ -1,0 +1,185 @@
+services:
+  # PostgreSQL for User Service
+  user-postgres-test:
+    image: postgres:14
+    container_name: ${USER_POSTGRES_HOST}
+    ports:
+      - ${USER_POSTGRES_EXPOSED_PORT}:${USER_POSTGRES_PORT}
+    environment:
+      POSTGRES_USER: ${USER_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${USER_POSTGRES_PASSWORD}
+      POSTGRES_DB: ${USER_POSTGRES_DBNAME}
+      TZ: "Europe/Moscow"
+    volumes:
+      - user-pgdata:/var/lib/postgresql/data
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
+      interval: 1s
+      timeout: 5s
+      retries: 5
+
+  # User Service Postgres
+  user:
+    build: ./${USER_PATH}
+    container_name: ${USER_CONTAINER_NAME}
+    ports:
+      - ${USER_EXPOSED_PORT}:${USER_LOCAL_PORT}
+    environment:
+      POSTGRES_URI: postgres://${USER_POSTGRES_USER}:${USER_POSTGRES_PASSWORD}@${USER_POSTGRES_HOST}:${USER_POSTGRES_PORT}/${USER_POSTGRES_DBNAME}
+    depends_on:
+      user-postgres-test:
+        condition: service_healthy
+    networks:
+      - backend
+    volumes:
+      - ./config.test.toml:/app/config.toml
+      - ./logs:/app/logs
+    restart: on-failure
+
+  user-migrate-postgres:
+    image: migrate/migrate
+    container_name: user-migrate-postgres
+    volumes:
+      - ./${USER_PATH}/migrations/sql:/migrations
+    depends_on:
+      user-postgres-test:
+        condition: service_healthy
+    networks:
+      - backend
+    entrypoint: ["migrate", "-path=/migrations", "-database", "postgres://${USER_POSTGRES_USER}:${USER_POSTGRES_PASSWORD}@${USER_POSTGRES_HOST}:${USER_POSTGRES_PORT}/${USER_POSTGRES_DBNAME}?sslmode=${USER_POSTGRES_SSLMODE}", "up"]
+
+  # PostgreSQL for Todo Service
+  todo-postgres-test:
+    image: postgres:14
+    container_name: ${TODO_POSTGRES_HOST}
+    ports:
+      - ${TODO_POSTGRES_EXPOSED_PORT}:${TODO_POSTGRES_PORT}
+    environment:
+      POSTGRES_USER: ${TODO_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${TODO_POSTGRES_PASSWORD}
+      POSTGRES_DB: ${TODO_POSTGRES_DBNAME}
+      TZ: "Europe/Moscow"
+    volumes:
+      - todo-pgdata:/var/lib/postgresql/data
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
+      interval: 1s
+      timeout: 5s
+      retries: 5
+
+  # Todo Service
+  todo:
+    build: ./${TODO_PATH}
+    container_name: ${TODO_CONTAINER_NAME}
+    ports:
+      - ${TODO_EXPOSED_PORT}:${TODO_LOCAL_PORT}
+    depends_on:
+      todo-postgres-test:
+        condition: service_healthy
+    environment:
+      POSTGRES_URL: postgres://${TODO_POSTGRES_USER}:${TODO_POSTGRES_PASSWORD}@${TODO_POSTGRES_HOST}:${TODO_POSTGRES_PORT}/${TODO_POSTGRES_DBNAME}
+    volumes:
+      - ./config.test.toml:/app/config.toml
+      - ./logs:/app/logs
+    networks:
+      - backend
+    restart: on-failure
+
+  todo-migrate-postgres:
+    image: migrate/migrate
+    container_name: todo-migrate-postgres
+    volumes:
+      - ./${TODO_PATH}/migrations/sql:/migrations
+    depends_on:
+      todo-postgres-test:
+        condition: service_healthy
+    networks:
+      - backend
+    entrypoint: ["migrate", "-path=/migrations", "-database", "postgres://${TODO_POSTGRES_USER}:${TODO_POSTGRES_PASSWORD}@${TODO_POSTGRES_HOST}:${TODO_POSTGRES_PORT}/${TODO_POSTGRES_DBNAME}?sslmode=${TODO_POSTGRES_SSLMODE}", "up"]
+
+  # PostgreSQL for Auth Service
+  auth-postgres-test:
+    image: postgres:14
+    container_name: ${AUTH_POSTGRES_HOST}
+    ports:
+      - ${AUTH_POSTGRES_EXPOSED_PORT}:${AUTH_POSTGRES_PORT}
+    environment:
+      POSTGRES_USER: ${AUTH_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${AUTH_POSTGRES_PASSWORD}
+      POSTGRES_DB: ${AUTH_POSTGRES_DBNAME}
+      TZ: "Europe/Moscow"
+    volumes:
+      - auth-pgdata:/var/lib/postgresql/data
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
+      interval: 1s
+      timeout: 5s
+      retries: 5
+
+  # Auth Service
+  auth:
+    build: ./${AUTH_PATH}
+    container_name: ${AUTH_CONTAINER_NAME}
+    ports:
+      - ${AUTH_EXPOSED_PORT}:${AUTH_LOCAL_PORT}
+    depends_on:
+      auth-postgres-test:
+        condition: service_healthy
+      user:
+        condition: service_started
+    environment:
+      POSTGRES_URL: postgres://${AUTH_POSTGRES_USER}:${AUTH_POSTGRES_PASSWORD}@${AUTH_POSTGRES_HOST}:${AUTH_POSTGRES_PORT}/${AUTH_POSTGRES_DBNAME}
+    volumes:
+      - ./config.test.toml:/app/config.toml
+      - ./logs:/app/logs
+    networks:
+      - backend
+    restart: on-failure
+
+  auth-migrate-postgres:
+    image: migrate/migrate
+    container_name: auth-migrate-postgres
+    volumes:
+      - ./${AUTH_PATH}/migrations/sql:/migrations
+    depends_on:
+      auth-postgres-test:
+        condition: service_healthy
+    networks:
+      - backend
+    entrypoint: ["migrate", "-path=/migrations", "-database", "postgres://${AUTH_POSTGRES_USER}:${AUTH_POSTGRES_PASSWORD}@${AUTH_POSTGRES_HOST}:${AUTH_POSTGRES_PORT}/${AUTH_POSTGRES_DBNAME}?sslmode=${AUTH_POSTGRES_SSLMODE}", "up"]
+
+  # Aggregator Service
+  aggregator:
+    build: ./${AGGREGATOR_PATH}
+    container_name: ${AGGREGATOR_CONTAINER_NAME}
+    ports:
+      - ${AGGREGATOR_EXPOSED_PORT}:${AGGREGATOR_LOCAL_PORT}
+    depends_on:
+      auth:
+        condition: service_started
+      user:
+        condition: service_started
+      todo:
+        condition: service_started
+    volumes:
+      - ./config.test.toml:/app/config.toml
+      - ./logs:/app/logs
+    networks:
+      - backend
+    restart: on-failure
+
+networks:
+  backend:
+    name: test-backend
+    driver: bridge
+
+volumes:
+  user-pgdata:
+  todo-pgdata:
+  auth-pgdata:

@@ -1,0 +1,36 @@
+services:
+  user-migrate-postgres-down:
+    image: migrate/migrate
+    container_name: user-migrate-postgres-down
+    volumes:
+      - ./${USER_PATH}/migrations/sql:/migrations
+    depends_on:
+      user-postgres-test:
+        condition: service_healthy
+    networks:
+      - backend
+    entrypoint: ["migrate", "-path=/migrations", "-database", "postgres://${USER_POSTGRES_USER}:${USER_POSTGRES_PASSWORD}@${USER_POSTGRES_HOST}:${USER_POSTGRES_PORT}/${USER_POSTGRES_DBNAME}?sslmode=${USER_POSTGRES_SSLMODE}", "down", "-all"]
+
+  auth-migrate-postgres-down:
+    image: migrate/migrate
+    container_name: auth-migrate-postgres-down
+    volumes:
+      - ./${AUTH_PATH}/migrations/sql:/migrations
+    depends_on:
+      auth-postgres-test:
+        condition: service_healthy
+    networks:
+      - backend
+    entrypoint: ["migrate", "-path=/migrations", "-database", "postgres://${AUTH_POSTGRES_USER}:${AUTH_POSTGRES_PASSWORD}@${AUTH_POSTGRES_HOST}:${AUTH_POSTGRES_PORT}/${AUTH_POSTGRES_DBNAME}?sslmode=${AUTH_POSTGRES_SSLMODE}", "down", "-all"]
+
+  todo-migrate-postgres-down:
+    image: migrate/migrate
+    container_name: todo-migrate-postgres-down
+    volumes:
+      - ./${TODO_PATH}/migrations/sql:/migrations
+    depends_on:
+      todo-postgres-test:
+        condition: service_healthy
+    networks:
+      - backend
+    entrypoint: ["migrate", "-path=/migrations", "-database", "postgres://${TODO_POSTGRES_USER}:${TODO_POSTGRES_PASSWORD}@${TODO_POSTGRES_HOST}:${TODO_POSTGRES_PORT}/${TODO_POSTGRES_DBNAME}?sslmode=${TODO_POSTGRES_SSLMODE}", "down", "-all"]
