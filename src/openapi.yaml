@@ -1,0 +1,685 @@
+openapi: 3.0.3
+info:
+  title: Todo App API
+  version: "1.0.0"
+servers:
+  - url: http://localhost:8080
+
+paths:
+  /api/v2/register:
+    post:
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '200':
+          description: User registered successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /api/v2/login:
+    post:
+      summary: User login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+
+  /api/v2/refresh:
+    post:
+      summary: Refresh authentication token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      responses:
+        '200':
+          description: Token refreshed successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+
+  /api/v2/validate:
+    post:
+      summary: Validate token or user data
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ValidateRequest'
+      responses:
+        '200':
+          description: Validation successful.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /api/v2/logout:
+    post:
+      summary: User logout
+      responses:
+        '200':
+          description: Logout successful.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /api/v2/2fa/validate:
+    post:
+      summary: Validate OTP for 2FA
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ValidateOTPRequest'
+      responses:
+        '200':
+          description: OTP validated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /api/v2/2fa/login:
+    post:
+      summary: Login using OTP for 2FA
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginOTPRequest'
+      responses:
+        '200':
+          description: Login via OTP successful.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+
+  /api/v2/2fa/init:
+    post:
+      summary: Generate OTP secret for 2FA initialization
+      responses:
+        '200':
+          description: OTP secret generated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OTPSecretResponse'
+
+  /api/v2/2fa/enable:
+    post:
+      summary: Enable 2FA for a user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Enable2FARequest'
+      responses:
+        '200':
+          description: 2FA enabled successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /api/v2/2fa/disable:
+    post:
+      summary: Disable 2FA for a user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Disable2FARequest'
+      responses:
+        '200':
+          description: 2FA disabled successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /api/v2/2fa/enabled:
+    post:
+      summary: Check if 2FA is enabled
+      responses:
+        '200':
+          description: Returns 2FA enabled status.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Enabled2FAResponse'
+
+  /api/v2/2fa/update_password:
+    post:
+      summary: Update password for 2FA-protected user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePassword2FARequest'
+      responses:
+        '200':
+          description: Password updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /api/v2/boards:
+    get:
+      summary: Retrieve list of boards
+      responses:
+        '200':
+          description: List of boards retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BoardsResponse'
+
+  /api/v2/board/{id}:
+    get:
+      summary: Get board details including columns and cards
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Board details retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BoardResponse'
+    delete:
+      summary: Delete a board by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Board deleted successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /api/v2/board:
+    post:
+      summary: Create a new board
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBoardRequest'
+      responses:
+        '200':
+          description: Board created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BoardResponse'
+    put:
+      summary: Update an existing board
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateBoardRequest'
+      responses:
+        '200':
+          description: Board updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BoardResponse'
+
+  /api/v2/column/{id}:
+    get:
+      summary: Get column details (cards list)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Column details retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ColumnResponse'
+    delete:
+      summary: Delete a column by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Column deleted successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /api/v2/column:
+    post:
+      summary: Create a new column
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateColumnRequest'
+      responses:
+        '200':
+          description: Column created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ColumnResponse'
+    put:
+      summary: Update an existing column
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateColumnRequest'
+      responses:
+        '200':
+          description: Column updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ColumnResponse'
+
+  /api/v2/card/{id}:
+    get:
+      summary: Get card details (with description)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Card details retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CardResponse'
+    delete:
+      summary: Delete a card by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Card deleted successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /api/v2/card:
+    post:
+      summary: Create a new card
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCardRequest'
+      responses:
+        '200':
+          description: Card created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CardResponse'
+    put:
+      summary: Update an existing card
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCardRequest'
+      responses:
+        '200':
+          description: Card updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CardResponse'
+
+  /api/v2/stats/{from}/{to}:
+    get:
+      summary: Get statistics between two dates
+      parameters:
+        - name: from
+          in: path
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: path
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Statistics retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatsResponse'
+
+  /api/v2/stats/{from}:
+    get:
+      summary: Get statistics from a specified date
+      parameters:
+        - name: from
+          in: path
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Statistics retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatsResponse'
+
+  /api/v2/stats:
+    get:
+      summary: Get overall statistics
+      responses:
+        '200':
+          description: Statistics retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatsResponse'
+
+components:
+  schemas:
+    RegisterRequest:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+        email:
+          type: string
+      required:
+        - username
+        - password
+        - email
+
+    LoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+      required:
+        - email
+        - password
+
+    LoginResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        refreshToken:
+          type: string
+
+    RefreshRequest:
+      type: object
+      properties:
+        refreshToken:
+          type: string
+      required:
+        - refreshToken
+
+    ValidateRequest:
+      type: object
+      properties:
+        token:
+          type: string
+      required:
+        - token
+
+    ValidateOTPRequest:
+      type: object
+      properties:
+        otp:
+          type: string
+      required:
+        - otp
+
+    LoginOTPRequest:
+      type: object
+      properties:
+        email:
+          type: string
+        otp:
+          type: string
+      required:
+        - email
+        - otp
+
+    OTPSecretResponse:
+      type: object
+      properties:
+        secret:
+          type: string
+
+    Enable2FARequest:
+      type: object
+      properties:
+        otp:
+          type: string
+      required:
+        - otp
+
+    Enabled2FAResponse:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+
+    Disable2FARequest:
+      type: object
+      properties:
+        confirmation:
+          type: boolean
+      required:
+        - confirmation
+
+    UpdatePassword2FARequest:
+      type: object
+      properties:
+        oldPassword:
+          type: string
+        newPassword:
+          type: string
+      required:
+        - oldPassword
+        - newPassword
+
+    BoardsResponse:
+      type: object
+      properties:
+        boards:
+          type: array
+          items:
+            $ref: '#/components/schemas/BoardResponse'
+
+    BoardResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        columns:
+          type: array
+          items:
+            $ref: '#/components/schemas/ColumnResponse'
+
+    CreateBoardRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+      required:
+        - name
+
+    UpdateBoardRequest:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+      required:
+        - id
+        - name
+
+    ColumnResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        cards:
+          type: array
+          items:
+            $ref: '#/components/schemas/CardResponse'
+
+    CreateColumnRequest:
+      type: object
+      properties:
+        boardId:
+          type: string
+        name:
+          type: string
+      required:
+        - boardId
+        - name
+
+    UpdateColumnRequest:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+      required:
+        - id
+        - name
+
+    CardResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+
+    CreateCardRequest:
+      type: object
+      properties:
+        columnId:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+      required:
+        - columnId
+        - title
+
+    UpdateCardRequest:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+      required:
+        - id
+        - title
+
+    StatsResponse:
+      type: object
+      properties:
+        stats:
+          type: object
+
+    SuccessResponse:
+      type: object
+      properties:
+        message:
+          type: string
