@@ -92,6 +92,7 @@ func (u *userUseCase) CreateUser(ctx context.Context, user entity.User) error {
 
 	user.ID = uuid.New()
 	user.Role = "user"
+	user.EmailVerified = false
 	user.CreatedAt = time.Now()
 	user.UpdatedAt = time.Now()
 
@@ -390,7 +391,7 @@ func (u *userUseCase) DeleteUser(ctx context.Context, id uuid.UUID) error {
 	if existingUser == nil {
 		info := "User does not exist"
 		u.log.Error(ctx, header+info)
-		return errors.New(info)
+		return fmt.Errorf(header+info+": %w", ErrUserNotExist)
 	}
 
 	u.log.Info(ctx, header+"User exists, making request to repo", "id", id)

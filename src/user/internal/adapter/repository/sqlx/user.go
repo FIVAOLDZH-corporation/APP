@@ -23,8 +23,8 @@ func (r *SQLXUserRepository) CreateUser(ctx context.Context, user *entity.User) 
 	repoUser := repository.RepoUser(*user)
 
 	query := `
-    INSERT INTO users (id, username, email, password_hash, created_at, updated_at)
-    VALUES (:id, :username, :email, :password_hash, :created_at, :updated_at)
+    INSERT INTO users (id, username, email, password_hash, email_verified, created_at, updated_at)
+    VALUES (:id, :username, :email, :password_hash, :email_verified, :created_at, :updated_at)
     `
 	_, err := r.db.NamedExecContext(ctx, query, &repoUser)
 
@@ -160,6 +160,7 @@ func (r *SQLXUserRepository) UpdateUser(ctx context.Context, user *entity.User) 
 	username = :username,
 	email = :email,
 	password_hash = :password_hash,
+	email_verified = :email_verified,
 	updated_at = :updated_at
     WHERE id = :id
     `

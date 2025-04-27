@@ -44,10 +44,11 @@ func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 
 	if err = json.NewEncoder(w).Encode(dto.UserDTO{
-		ID:           user.ID,
-		Username:     user.Username,
-		Email:        user.Email,
-		PasswordHash: user.PasswordHash,
+		ID:            user.ID,
+		Username:      user.Username,
+		Email:         user.Email,
+		PasswordHash:  user.PasswordHash,
+		EmailVerified: user.EmailVerified,
 	}); err != nil {
 		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
 	}
@@ -70,10 +71,11 @@ func (h *UserHandler) GetUserByID(w http.ResponseWriter, r *http.Request) {
 	}
 
 	json.NewEncoder(w).Encode(dto.UserDTO{
-		ID:           user.ID,
-		Username:     user.Username,
-		Email:        user.Email,
-		PasswordHash: user.PasswordHash,
+		ID:            user.ID,
+		Username:      user.Username,
+		Email:         user.Email,
+		PasswordHash:  user.PasswordHash,
+		EmailVerified: user.EmailVerified,
 	})
 }
 
@@ -195,6 +197,9 @@ func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 	if input.Password != nil {
 		user.PasswordHash = *input.Password
 	}
+	if input.EmailVerified != nil {
+		user.EmailVerified = *input.EmailVerified
+	}
 
 	updatedUser, err := h.userUseCase.UpdateUser(r.Context(), user)
 	if err != nil {
@@ -204,10 +209,11 @@ func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(dto.UserDTO{
-		ID:           updatedUser.ID,
-		Username:     updatedUser.Username,
-		Email:        updatedUser.Email,
-		PasswordHash: updatedUser.PasswordHash,
+		ID:            updatedUser.ID,
+		Username:      updatedUser.Username,
+		Email:         updatedUser.Email,
+		PasswordHash:  updatedUser.PasswordHash,
+		EmailVerified: updatedUser.EmailVerified,
 	})
 }
 
