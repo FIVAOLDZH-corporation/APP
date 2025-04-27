@@ -1,5 +1,4 @@
 services:
-  # PostgreSQL for User Service
   user-postgres:
     image: postgres:14
     container_name: ${USER_POSTGRES_HOST}
@@ -18,9 +17,20 @@ services:
       timeout: 5s
       retries: 5
 
-  # User Service Postgres
+  user-migrate-postgres:
+    image: migrate/migrate
+    container_name: user-migrate-postgres
+    volumes:
+      - ./migrations/user:/migrations
+    depends_on:
+      user-postgres:
+        condition: service_healthy
+    networks:
+      - backend
+    entrypoint: [ "migrate", "-path=/migrations", "-database", "postgres://${USER_POSTGRES_USER}:${USER_POSTGRES_PASSWORD}@${USER_POSTGRES_HOST}:${USER_POSTGRES_PORT}/${USER_POSTGRES_DBNAME}?sslmode=${USER_POSTGRES_SSLMODE}", "up" ]
+
   user:
-    build: ./${USER_PATH}
+    image: ghcr.io/${GITHUB_REPOSITORY}/user:${VERSION}
     container_name: ${USER_CONTAINER_NAME}
     ports:
       - ${USER_EXPOSED_PORT}:${USER_LOCAL_PORT}
@@ -35,18 +45,6 @@ services:
       - ./config.toml:/app/config.toml
       - ./logs:/app/logs
     restart: on-failure
-
-  user-migrate-postgres:
-    image: migrate/migrate
-    container_name: user-migrate-postgres
-    volumes:
-      - ./${USER_PATH}/migrations/sql:/migrations
-    depends_on:
-      user-postgres:
-        condition: service_healthy
-    networks:
-      - backend
-    entrypoint: ["migrate", "-path=/migrations", "-database", "postgres://${USER_POSTGRES_USER}:${USER_POSTGRES_PASSWORD}@${USER_POSTGRES_HOST}:${USER_POSTGRES_PORT}/${USER_POSTGRES_DBNAME}?sslmode=${USER_POSTGRES_SSLMODE}", "up"]
 
 volumes:
   user-pgdata:
