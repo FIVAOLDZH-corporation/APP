@@ -1,0 +1,411 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ * ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      deploy_target:
+        description: 'Environment to deploy to (stage or production)'
+        required: false
+        default: 'production'
+      version:
+        description: 'Version to deploy (default: latest commit SHA)'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  golangci:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+      - name: golangci-lint-aggregator
+        uses: golangci/golangci-lint-action@v7
+        with:
+          version: v2.0
+          working-directory: src/aggregator
+      - name: golangci-lint-auth
+        uses: golangci/golangci-lint-action@v7
+        with:
+          version: v2.0
+          working-directory: src/auth
+      - name: golangci-lint-todo
+        uses: golangci/golangci-lint-action@v7
+        with:
+          version: v2.0
+          working-directory: src/todo
+      - name: golangci-lint-user
+        uses: golangci/golangci-lint-action@v7
+        with:
+          version: v2.0
+          working-directory: src/user
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    needs: [ golangci ]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Go with caching
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+          cache: true
+          cache-dependency-path: |
+            src/*/go.sum
+
+      - name: Test aggregator
+        run: |
+          cd src/aggregator
+          go test -v ./...
+
+      - name: Test auth
+        run: |
+          cd src/auth
+          go test -v ./...
+
+      - name: Test todo
+        run: |
+          cd src/todo
+          go test -v ./...
+
+      - name: Test user
+        run: |
+          cd src/user
+          go test -v ./...
+
+  build:
+    name: Build Docker Images
+    runs-on: ubuntu-latest
+    needs: [ test ]
+    if: github.event_name != 'pull_request'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: ghcr.io/${{ github.repository }}
+
+      - name: Build and push aggregator
+        uses: docker/build-push-action@v4
+        with:
+          context: ./src/aggregator
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}/aggregator:${{ github.sha }}
+            ghcr.io/${{ github.repository }}/aggregator:latest
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push auth
+        uses: docker/build-push-action@v4
+        with:
+          context: ./src/auth
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}/auth:${{ github.sha }}
+            ghcr.io/${{ github.repository }}/auth:latest
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push todo
+        uses: docker/build-push-action@v4
+        with:
+          context: ./src/todo
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}/todo:${{ github.sha }}
+            ghcr.io/${{ github.repository }}/todo:latest
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push user
+        uses: docker/build-push-action@v4
+        with:
+          context: ./src/user
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}/user:${{ github.sha }}
+            ghcr.io/${{ github.repository }}/user:latest
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy-stage:
+    name: Deploy to Stage
+    runs-on: ubuntu-latest
+    needs: [ build ]
+    if: |
+      github.event_name == 'workflow_dispatch' && 
+      (github.event.inputs.deploy_target == 'stage' || github.event.inputs.deploy_target == '')
+    environment: stage
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          ref: main
+
+      - name: Setup Python  # Настройка Python для выполнения скриптов
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Setup SSH  # Настройка SSH для подключения к серверу
+        uses: webfactory/ssh-agent@v0.7.0
+        with:
+          ssh-private-key: ${{ secrets.STAGE_SSH_PRIVATE_KEY }}
+
+      - name: Set deployment version  # Установка версии для деплоя
+        id: version
+        run: |
+          if [ -z "${{ github.event.inputs.version }}" ]; then
+            echo "VERSION=${{ github.sha }}" >> $GITHUB_ENV
+          else
+            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_ENV
+          fi
+
+      - name: Create deployment folder  # Создание папок для деплоя, включая папки для миграций и логов
+        run: |
+          mkdir -p deploy
+          mkdir -p deploy/migrations/auth
+          mkdir -p deploy/migrations/todo
+          mkdir -p deploy/migrations/user
+          mkdir -p deploy/logs
+
+      - name: Copy files for deployment  # Копирование всех необходимых файлов для деплоя, включая миграции
+        run: |
+          cp src/docker-compose.yml deploy/
+          cp src/docker-compose.user.postgres.yml deploy/
+          cp src/config.toml deploy/
+          cp src/scripts/generate_env.py deploy/
+          cp -r src/auth/migrations/sql/* deploy/migrations/auth/
+          cp -r src/todo/migrations/sql/* deploy/migrations/todo/
+          cp -r src/user/migrations/sql/* deploy/migrations/user/
+
+      - name: Create Docker Compose override for image versions  # Создание override файла для указания версий образов
+        run: |
+          cat > deploy/docker-compose.override.yml << EOF
+          services:
+            aggregator:
+              image: ghcr.io/${{ github.repository }}/aggregator:${{ env.VERSION }}
+            auth:
+              image: ghcr.io/${{ github.repository }}/auth:${{ env.VERSION }}
+            todo:
+              image: ghcr.io/${{ github.repository }}/todo:${{ env.VERSION }}
+            user:
+              image: ghcr.io/${{ github.repository }}/user:${{ env.VERSION }}
+          EOF
+
+      - name: Generate .env file  # Генерация файла окружения
+        run: |
+          cd deploy
+          python generate_env.py
+          cat .env
+
+      - name: Deploy to Stage Server  # Выполнение деплоя на стейджинг сервер
+        run: |
+          # Создаем директорию для деплоя
+          ssh -o StrictHostKeyChecking=no ${{ secrets.STAGE_SSH_USER }}@${{ secrets.STAGE_SSH_HOST }} "mkdir -p ~/app_deploy"
+          
+          echo "Создана директория для деплоя"
+          
+          # Копируем все обычные файлы
+          scp -o StrictHostKeyChecking=no -r deploy/* ${{ secrets.STAGE_SSH_USER }}@${{ secrets.STAGE_SSH_HOST }}:~/app_deploy/
+          
+          echo "Скопированы все обычные файлы"
+          
+          # Явно копируем скрытый файл .env
+          scp -o StrictHostKeyChecking=no deploy/.env ${{ secrets.STAGE_SSH_USER }}@${{ secrets.STAGE_SSH_HOST }}:~/app_deploy/
+          
+          echo "Скопирован скрытый файл .env"
+          
+          # Выполняем деплой
+          ssh -o StrictHostKeyChecking=no ${{ secrets.STAGE_SSH_USER }}@${{ secrets.STAGE_SSH_HOST }} << 'ENDSSH'
+          
+          echo "Выполнено подключение по SSH"
+          
+          cd ~/app_deploy
+          
+          echo "Переход в директорию деплоя"
+          
+          ls -la
+          
+          # Вход в GitHub Container Registry
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.repository_owner }} --password-stdin
+          
+          echo "Выполнен вход в GitHub Container Registry"
+          
+          # Загрузка последних образов
+          docker-compose --env-file .env -f docker-compose.yml -f docker-compose.user.postgres.yml -f docker-compose.override.yml pull
+          
+          echo "Загружены последние образы"
+          
+          # Деплой приложения
+          docker-compose --env-file .env -f docker-compose.yml -f docker-compose.user.postgres.yml -f docker-compose.override.yml down
+          
+          echo "Остановлены предыдущие контейнеры (docker-compose down)"
+          
+          docker-compose --env-file .env -f docker-compose.yml -f docker-compose.user.postgres.yml -f docker-compose.override.yml up -d
+          
+          echo "Запущены новые контейнеры (docker-compose up)"
+          
+          ENDSSH
+
+      - name: Notify Deployment Success  # Уведомление об успешном деплое
+        run: echo "Деплой на Stage успешно завершен!"
+
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [ build ]
+    if: |
+      github.event_name == 'workflow_dispatch' && 
+      github.event.inputs.deploy_target == 'production'
+    environment: production
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          ref: main
+
+      - name: Setup Python  # Настройка Python для выполнения скриптов
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Setup SSH  # Настройка SSH для подключения к серверу
+        uses: webfactory/ssh-agent@v0.7.0
+        with:
+          ssh-private-key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
+
+      - name: Set deployment version  # Установка версии для деплоя
+        id: version
+        run: |
+          if [ -z "${{ github.event.inputs.version }}" ]; then
+            echo "VERSION=${{ github.sha }}" >> $GITHUB_ENV
+          else
+            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_ENV
+          fi
+
+      - name: Create deployment folder  # Создание папок для деплоя, включая папки для миграций и логов
+        run: |
+          mkdir -p deploy
+          mkdir -p deploy/migrations/auth
+          mkdir -p deploy/migrations/todo
+          mkdir -p deploy/migrations/user
+          mkdir -p deploy/logs
+
+      - name: Copy files for deployment  # Копирование всех необходимых файлов для деплоя, включая миграции
+        run: |
+          cp src/docker-compose.yml deploy/
+          cp src/docker-compose.user.postgres.yml deploy/
+          cp src/config.toml deploy/
+          cp src/scripts/generate_env.py deploy/
+          cp -r src/auth/migrations/sql/* deploy/migrations/auth/
+          cp -r src/todo/migrations/sql/* deploy/migrations/todo/
+          cp -r src/user/migrations/sql/* deploy/migrations/user/
+
+      - name: Create Docker Compose override for image versions  # Создание override файла для указания версий образов
+        run: |
+          cat > deploy/docker-compose.override.yml << EOF
+          services:
+            aggregator:
+              image: ghcr.io/${{ github.repository }}/aggregator:${{ env.VERSION }}
+            auth:
+              image: ghcr.io/${{ github.repository }}/auth:${{ env.VERSION }}
+            todo:
+              image: ghcr.io/${{ github.repository }}/todo:${{ env.VERSION }}
+            user:
+              image: ghcr.io/${{ github.repository }}/user:${{ env.VERSION }}
+          EOF
+
+      - name: Generate .env file  # Генерация файла окружения
+        run: |
+          # Выполняем generate_env.py на runner, где Python установлен
+          cd deploy
+          python generate_env.py
+          cat .env
+
+      - name: Deploy to Production Server  # Выполнение деплоя на продакшн сервер
+        run: |
+          # Create deployment directory
+          ssh -o StrictHostKeyChecking=no ${{ secrets.PROD_SSH_USER }}@${{ secrets.PROD_SSH_HOST }} "mkdir -p ~/app_deploy"
+          
+          echo "Created deployment directory"
+          
+          # Copy all regular files first
+          scp -o StrictHostKeyChecking=no -r deploy/* ${{ secrets.PROD_SSH_USER }}@${{ secrets.PROD_SSH_HOST }}:~/app_deploy/
+          
+          echo "Copied all regular files first"
+          
+          # Explicitly copy the .env file (hidden file)
+          scp -o StrictHostKeyChecking=no deploy/.env ${{ secrets.PROD_SSH_USER }}@${{ secrets.PROD_SSH_HOST }}:~/app_deploy/
+          
+          echo "Explicitly copied the .env file (hidden file)"
+          
+          # Execute deployment
+          ssh -o StrictHostKeyChecking=no ${{ secrets.PROD_SSH_USER }}@${{ secrets.PROD_SSH_HOST }} << 'ENDSSH'
+          
+          echo "connected to ssh"
+          
+          cd ~/app_deploy
+          
+          echo "cd'ed to app deploy"
+          
+          ls -la
+          
+          # Login to GitHub Container Registry
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.repository_owner }} --password-stdin
+          
+          echo "logined to  GitHub Container Registry"
+          
+          # Pull the latest images
+          docker-compose --env-file .env -f docker-compose.yml -f docker-compose.user.postgres.yml -f docker-compose.override.yml pull
+          
+          echo "pulled latest images"
+          
+          # Deploy the application
+          docker-compose --env-file .env -f docker-compose.yml -f docker-compose.user.postgres.yml -f docker-compose.override.yml down
+          
+          echo "docker compose down'ed"
+          
+          docker-compose --env-file .env -f docker-compose.yml -f docker-compose.user.postgres.yml -f docker-compose.override.yml up -d
+          
+          echo "docker compose up'ed"
+          
+          ENDSSH
+
+      - name: Notify Deployment Success  # Уведомление об успешном деплое
+        run: echo "Deployment to Production completed successfully!"
