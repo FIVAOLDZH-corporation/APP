@@ -15,6 +15,7 @@ type AggregatorUseCase interface {
 	Refresh(ctx context.Context, refreshToken string) (*dto.RefreshResponse, error)
 	Validate(ctx context.Context, token string) (*dto.ValidateTokenResponse, error)
 	Logout(ctx context.Context, refreshToken string) error
+	VerifyEmail(ctx context.Context, email, code string) error
 
 	LoginOTP(ctx context.Context, email, otp string) (*dto.Tokens, error)
 	GenerateOTPSecret(ctx context.Context, email string) (string, error)

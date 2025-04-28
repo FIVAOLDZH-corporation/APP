@@ -182,3 +182,8 @@ type UpdatePassword2FARequest struct {
 	NewPassword string `json:"new_password"`
 	OTP         string `json:"otp"`
 }
+
+type VerifyEmailRequest struct {
+	Email string `json:"email"`
+	Code  string `json:"code"`
+}

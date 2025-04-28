@@ -8,6 +8,7 @@ type AggregatorHandler interface {
 	Refresh(w http.ResponseWriter, r *http.Request)
 	Validate(w http.ResponseWriter, r *http.Request)
 	Logout(w http.ResponseWriter, r *http.Request)
+	VerifyEmail(w http.ResponseWriter, r *http.Request)
 
 	LoginOTP(w http.ResponseWriter, r *http.Request)
 	GenerateOTPSecret(w http.ResponseWriter, r *http.Request)

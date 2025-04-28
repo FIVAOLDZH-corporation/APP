@@ -26,6 +26,7 @@ var (
 	ErrValidateOTP       error             = errors.New("failed to validate OTP")
 	ErrEnabled2FA        error             = errors.New("failed to check if 2FA is enabled")
 	ErrUpdatePassword2FA error             = errors.New("failed to update password with 2FA")
+	ErrVerifyEmail       error             = errors.New("failed to verify email")
 	ErrDecodeResponse    func(error) error = func(err error) error {
 		return fmt.Errorf("failed to decode response: %w", err)
 	}
@@ -454,4 +455,31 @@ func (s *AuthService) makeRequest(ctx context.Context, method, url string, data 
 	}
 
 	return resp, nil
+}
+
+func (s *AuthService) VerifyEmail(ctx context.Context, email, code string) error {
+	url := fmt.Sprintf("%s/verify-email", s.baseURL)
+
+	data := dto.VerifyEmailRequest{
+		Email: email,
+		Code:  code,
+	}
+
+	s.log.Info(ctx, "Making VerifyEmail request", "url", url, "data", data)
+
+	method := http.MethodPost
+	resp, err := s.makeRequest(ctx, method, url, data)
+	if err != nil {
+		s.log.Error(ctx, "Error making the request", "method", method, "url", url, "data", data)
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		err = ErrVerifyEmail
+		s.log.Error(ctx, err.Error())
+		return err
+	}
+
+	return nil
 }
