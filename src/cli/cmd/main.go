@@ -19,7 +19,8 @@ import (
 )
 
 // var abspath string = "/home/rukost/University/software-design-s6-bmstu.git/lab5/src/"
-var abspath string = "/home/rukost/University/testing-s7-bmstu/src/"
+// var abspath string = "/home/rukost/University/testing-s7-bmstu/src/"
+var abspath string = "/home/rukost/University/APP/src/"
 
 func init() {
 	loc, err := time.LoadLocation("Europe/Moscow")

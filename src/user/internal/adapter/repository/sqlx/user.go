@@ -93,6 +93,7 @@ func (r *SQLXUserRepository) GetUsers(ctx context.Context, filter repository.Use
 		str := fmt.Sprintf(" AND username = $%d", i)
 		query += str
 		args = append(args, *filter.Username)
+		//nolint:ineffassign
 		i += 1
 	}
 
