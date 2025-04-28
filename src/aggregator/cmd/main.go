@@ -72,6 +72,9 @@ func main() {
 	loggingMiddleware := middleware.NewLoggingMiddleware(logger)
 	router.Use(loggingMiddleware.Middleware)
 	authMiddleware := middleware.NewAuthMiddleware(authSvc)
+	rateLimiterMiddleware := middleware.NewRateLimiterMiddleware(logger, 10, 5) // 10 запрос в секунду, 5 в пакете
+	router.Use(rateLimiterMiddleware.Middleware)
+
 	v1api.InitializeV1Routes(router, v1h, authMiddleware)
 	v2api.InitializeV2Routes(router, v1h, v2h, authMiddleware)
 
