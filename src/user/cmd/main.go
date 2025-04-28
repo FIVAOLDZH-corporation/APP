@@ -78,7 +78,7 @@ func main() {
 	// db, err := database.NewPostgresDB(config.User.Postgres)
 	db, err := dbRepo.DB()
 	if err != nil {
-		log.Fatalf("Couldn't connect to database, exiting: %w", err)
+		log.Fatalf("Couldn't connect to database, exiting: %v", err)
 	}
 
 	logger := logger.NewZapLogger(config.User.Log)

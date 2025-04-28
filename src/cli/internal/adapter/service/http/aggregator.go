@@ -13,6 +13,7 @@ import (
 	"time"
 )
 
+//nolint:unused
 const layout string = "02-01-2006"
 
 var (
