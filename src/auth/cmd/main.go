@@ -22,6 +22,8 @@ import (
 	"log"
 	"net/http"
 
+	"auth/internal/adapter/cache"
+
 	"github.com/gorilla/mux"
 )
 
@@ -34,14 +36,14 @@ func init() {
 }
 
 func main() {
-	config, err := config.LoadConfig("config.toml")
+	cfg, err := config.LoadConfig("config.toml")
 	if err != nil {
 		log.Println("Error reading config (config.toml)")
 	}
 
-	logger := logger.NewZapLogger(config.Auth.Log)
+	logger := logger.NewZapLogger(cfg.Auth.Log)
 
-	db, err := database.NewPostgresDB(config.Auth.Postgres)
+	db, err := database.NewPostgresDB(cfg.Auth.Postgres)
 	if err != nil {
 		log.Println("Couldn't connect to database, exiting")
 		return
@@ -49,19 +51,26 @@ func main() {
 
 	repo := sqlxRepo.NewSQLXTokenRepository(db)
 
-	baseURL := fmt.Sprintf("http://%s:%d/%s", config.User.ContainerName, config.User.LocalPort, config.User.BaseURL)
+	baseURL := fmt.Sprintf("http://%s:%d/%s", cfg.User.ContainerName, cfg.User.LocalPort, cfg.User.BaseURL)
 
 	userService := user.NewHTTPUserService(baseURL, 2*time.Second)
 	tokenService := jwt.NewJWTService(
-		config.Auth.Token.Secret,
-		time.Duration(config.Auth.Token.AccessTTL)*time.Second,
-		time.Duration(config.Auth.Token.RefreshTTL)*time.Second,
+		cfg.Auth.Token.Secret,
+		time.Duration(cfg.Auth.Token.AccessTTL)*time.Second,
+		time.Duration(cfg.Auth.Token.RefreshTTL)*time.Second,
 	)
 
 	otp2faRepo := sqlxRepo.NewSQLXOTP2FARepository(db)
 	otp2faService := otp2fa.NewOTP2FAService(otp2faRepo, logger)
 
-	uc := usecase.NewAuthUseCase(repo, userService, tokenService, otp2faService, logger)
+	usecaseConfig := &config.UsecaseConfig{
+		SMTP:  cfg.Auth.SMTP,
+		Cache: cfg.Auth.Cache,
+	}
+
+	cache := cache.NewInMemoryCache()
+
+	uc := usecase.NewAuthUseCase(repo, userService, tokenService, otp2faService, logger, *usecaseConfig, cache)
 
 	v1h := v1handler.NewAuthHandler(uc)
 	v2h := v2handler.NewAuthHandler(uc)
@@ -71,8 +80,8 @@ func main() {
 	v1api.InitializeV1Routes(router, v1h)
 	v2api.InitializeV2Routes(router, v1h, v2h)
 
-	localPort := fmt.Sprintf("%d", config.Auth.LocalPort)
-	exposedPort := fmt.Sprintf("%d", config.Auth.ExposedPort)
+	localPort := fmt.Sprintf("%d", cfg.Auth.LocalPort)
+	exposedPort := fmt.Sprintf("%d", cfg.Auth.ExposedPort)
 
 	log.Printf("Starting server on :%s\n", exposedPort)
 	http.ListenAndServe(":"+localPort, router)

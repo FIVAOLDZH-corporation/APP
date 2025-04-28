@@ -21,7 +21,8 @@ services:
     image: migrate/migrate
     container_name: user-migrate-postgres
     volumes:
-      - ./migrations/user:/migrations
+      - ./${USER_PATH}/migrations/sql:/migrations
+      # - ./migrations/user:/migrations
     depends_on:
       user-postgres:
         condition: service_healthy
@@ -30,7 +31,8 @@ services:
     entrypoint: [ "migrate", "-path=/migrations", "-database", "postgres://${USER_POSTGRES_USER}:${USER_POSTGRES_PASSWORD}@${USER_POSTGRES_HOST}:${USER_POSTGRES_PORT}/${USER_POSTGRES_DBNAME}?sslmode=${USER_POSTGRES_SSLMODE}", "up" ]
 
   user:
-    image: ghcr.io/${GITHUB_REPOSITORY}/user:${VERSION}
+    # image: ghcr.io/${GITHUB_REPOSITORY}/user:${VERSION}
+    build: ./${USER_PATH}
     container_name: ${USER_CONTAINER_NAME}
     ports:
       - ${USER_EXPOSED_PORT}:${USER_LOCAL_PORT}

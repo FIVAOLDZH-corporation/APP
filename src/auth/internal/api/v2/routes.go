@@ -12,6 +12,7 @@ func InitializeV2Routes(router *mux.Router, v1h *v1.AuthHandler, v2h *v2.AuthHan
 	router.HandleFunc("/api/v2/refresh", v1h.RefreshTokenHandler).Methods("POST")
 	router.HandleFunc("/api/v2/validate", v1h.ValidateTokenHandler).Methods("POST")
 	router.HandleFunc("/api/v2/logout", v1h.LogoutHandler).Methods("POST")
+	router.HandleFunc("/api/v2/verify-email", v1h.VerifyEmailHandler).Methods("POST")
 
 	router.HandleFunc("/api/v2/login", v2h.LoginHandler).Methods("POST")
 	router.HandleFunc("/api/v2/2fa/validate", v2h.ValidateOTPHandler).Methods("POST")

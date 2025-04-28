@@ -4,6 +4,7 @@ import (
 	"auth/internal/dto"
 	"auth/internal/usecase"
 	"encoding/json"
+	"fmt"
 	"net/http"
 )
 
@@ -153,4 +154,21 @@ func (h *AuthHandler) UpdatePassword2FAHandler(w http.ResponseWriter, r *http.Re
 		http.Error(w, "Couldn't update password", http.StatusInternalServerError)
 		return
 	}
+}
+
+func (h *AuthHandler) VerifyEmailHandler(w http.ResponseWriter, r *http.Request) {
+	var req dto.VerifyEmailRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	err := h.authUsecase.VerifyEmail(r.Context(), req.Email, req.Code)
+	if err != nil {
+		http.Error(w, "Couldn't verify email", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, "Email verified successfully")
 }

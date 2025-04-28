@@ -3,11 +3,11 @@ SCRIPT := scripts/generate_env.py
 all: up
 
 build:
-	docker compose --env-file .test-env -f docker-compose.test.yml build
-	# docker compose --env-file .env -f docker-compose.yml -f docker-compose.user.postgres.yml build
+	docker compose --env-file .env -f docker-compose.yml -f docker-compose.user.postgres.yml build
+	# docker compose --env-file .test-env -f docker-compose.test.yml build
 	# docker compose --env-file .env -f docker-compose.yml -f docker-compose.user.mongo.yml build
 
-up: test
+up: postgres
 
 test:
 	docker compose --env-file .test-env -f docker-compose.test.yml up -d
@@ -35,8 +35,8 @@ rmv:
 	for volume in $$(docker volume ls -q); do docker volume rm $$volume; done
 
 down:
-	docker compose --env-file .test-env -f docker-compose.test.yml down
-	# docker compose --env-file .env -f docker-compose.yml -f docker-compose.user.postgres.yml down
+	docker compose --env-file .env -f docker-compose.yml -f docker-compose.user.postgres.yml down
+	# docker compose --env-file .test-env -f docker-compose.test.yml down
 	# docker compose --env-file .env -f docker-compose.yml -f docker-compose.user.mongo.yml down
 
 boards:

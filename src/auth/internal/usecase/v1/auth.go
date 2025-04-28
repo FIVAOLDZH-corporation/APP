@@ -1,7 +1,9 @@
 package v1
 
 import (
+	"auth/internal/common/cache"
 	"auth/internal/common/logger"
+	"auth/internal/config"
 	"auth/internal/dto"
 	"auth/internal/entity"
 	"auth/internal/repository"
@@ -12,6 +14,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/rand"
+	"net/smtp"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -19,24 +24,29 @@ import (
 )
 
 var (
-	ErrIncorrectPassword    error = errors.New("incorrect password")
-	ErrGetAccessToken       error = errors.New("couldn't get access token")
-	ErrGenerateRefreshToken error = errors.New("couldn't generate refresh token")
-	ErrSaveRefreshToken     error = errors.New("couldn't save refresh token")
-	ErrInvalidRefreshToken  error = errors.New("invalid refresh token")
-	ErrGenerateAccessToken  error = errors.New("couldn't generate access token")
-	ErrFindRefreshToken     error = errors.New("couldn't find refresh token")
-	ErrDeleteRefreshToken   error = errors.New("couldn't delete refresh token")
-	ErrCreateUser           error = errors.New("couldn't create user")
-	ErrValidateToken        error = errors.New("couldn't validate token")
-	ErrLogin                error = errors.New("failed to login")
-	ErrGetUserByEmail       error = errors.New("failed to get user by email")
-	ErrGenereateSecret      error = errors.New("failed to generate secret")
-	ErrEnable2FA            error = errors.New("failed to enable 2fa")
-	ErrDisable2FA           error = errors.New("failed to disable 2fa")
-	ErrValidateOTP          error = errors.New("couldn't validate one-time password")
-	ErrInvalidOTP           error = errors.New("invalid otp")
-	ErrUpdatePassword2FA    error = errors.New("failed to update password 2fa")
+	ErrIncorrectPassword     error = errors.New("incorrect password")
+	ErrGetAccessToken        error = errors.New("couldn't get access token")
+	ErrGenerateRefreshToken  error = errors.New("couldn't generate refresh token")
+	ErrSaveRefreshToken      error = errors.New("couldn't save refresh token")
+	ErrInvalidRefreshToken   error = errors.New("invalid refresh token")
+	ErrGenerateAccessToken   error = errors.New("couldn't generate access token")
+	ErrFindRefreshToken      error = errors.New("couldn't find refresh token")
+	ErrDeleteRefreshToken    error = errors.New("couldn't delete refresh token")
+	ErrCreateUser            error = errors.New("couldn't create user")
+	ErrValidateToken         error = errors.New("couldn't validate token")
+	ErrLogin                 error = errors.New("failed to login")
+	ErrGetUserByEmail        error = errors.New("failed to get user by email")
+	ErrGenereateSecret       error = errors.New("failed to generate secret")
+	ErrEnable2FA             error = errors.New("failed to enable 2fa")
+	ErrDisable2FA            error = errors.New("failed to disable 2fa")
+	ErrValidateOTP           error = errors.New("couldn't validate one-time password")
+	ErrInvalidOTP            error = errors.New("invalid otp")
+	ErrUpdatePassword2FA     error = errors.New("failed to update password 2fa")
+	ErrSendVerificationEmail error = errors.New("failed to send verification email")
+	ErrGetCodeFromCache      error = errors.New("failed to get code from cache")
+	ErrInvalidCode           error = errors.New("invalid code")
+	ErrUpdateStatusVerified  error = errors.New("failed to update status verified")
+	ErrUserNotVerified       error = errors.New("user is not verified")
 )
 
 type authUseCase struct {
@@ -45,6 +55,8 @@ type authUseCase struct {
 	tokenService  tokengen.TokenService
 	otp2faService otp2fa.OTP2FAService
 	log           logger.Logger
+	cfg           config.UsecaseConfig
+	cache         cache.Cache
 }
 
 func NewAuthUseCase(
@@ -53,6 +65,8 @@ func NewAuthUseCase(
 	tokenService tokengen.TokenService,
 	otp2faService otp2fa.OTP2FAService,
 	log logger.Logger,
+	cfg config.UsecaseConfig,
+	cache cache.Cache,
 ) usecase.AuthUsecase {
 	return &authUseCase{
 		tokenRepo:     tokenRepo,
@@ -60,6 +74,8 @@ func NewAuthUseCase(
 		tokenService:  tokenService,
 		otp2faService: otp2faService,
 		log:           log,
+		cfg:           cfg,
+		cache:         cache,
 	}
 }
 
@@ -76,19 +92,32 @@ func (uc *authUseCase) Register(ctx context.Context, username, email, password s
 		return nil, fmt.Errorf(header+info+": %w", ErrCreateUser)
 	}
 
-	uc.log.Info(ctx, header+"Making request to Login usecase", "email", email, "password", password)
+	code := rand.Intn(1000000)
 
-	tokens, err := uc.Login(ctx, email, password)
+	uc.cache.Set(ctx, email, strconv.Itoa(code), time.Duration(uc.cfg.Cache.TTL)*time.Second)
 
+	err = uc.SendVerificationEmail(ctx, email, code)
 	if err != nil {
-		info := "Failed to login"
+		info := "Failed to send verification email"
 		uc.log.Error(ctx, header+info, "err", err.Error())
-		return nil, fmt.Errorf(header+info+": %w", ErrLogin)
+		return nil, fmt.Errorf(header+info+": %w", ErrSendVerificationEmail)
 	}
 
-	uc.log.Info(ctx, header+"Logged in", "tokens", tokens)
+	// uc.log.Info(ctx, header+"Making request to Login usecase", "email", email, "password", password)
 
-	return tokens, nil
+	// tokens, err := uc.Login(ctx, email, password)
+
+	// if err != nil {
+	// 	info := "Failed to login"
+	// 	uc.log.Error(ctx, header+info, "err", err.Error())
+	// 	return nil, fmt.Errorf(header+info+": %w", ErrLogin)
+	// }
+
+	// uc.log.Info(ctx, header+"Logged in", "tokens", tokens)
+
+	// return tokens, nil
+
+	return nil, nil
 }
 
 func (uc *authUseCase) Login(ctx context.Context, email, password string) (*dto.Tokens, error) {
@@ -110,6 +139,13 @@ func (uc *authUseCase) Login(ctx context.Context, email, password string) (*dto.
 	if !validatePassword(password, user.PasswordHash) {
 		err := ErrIncorrectPassword
 		uc.log.Info(ctx, header+err.Error(), "password", password, "userPasswordHash", user.PasswordHash)
+		return nil, err
+	}
+
+	// TODO: Check if user is verified
+	if !user.EmailVerified {
+		err := ErrUserNotVerified
+		uc.log.Info(ctx, header+err.Error(), "user", user)
 		return nil, err
 	}
 
@@ -524,6 +560,75 @@ func (uc *authUseCase) UpdatePassword2FA(ctx context.Context, email, oldPassword
 		uc.log.Error(ctx, header+info, "err", err.Error())
 		return fmt.Errorf(header+info+": %w", ErrUpdatePassword2FA)
 	}
+
+	return nil
+}
+
+func (uc *authUseCase) SendVerificationEmail(ctx context.Context, email string, code int) error {
+	header := "SendVerificationEmail: "
+
+	uc.log.Info(ctx, header+"Usecase called", "email", email, "code", code)
+
+	to := []string{email}
+	subject := "Subject: Confirm your email\n"
+	body := fmt.Sprintf("Your verification code is %d", code)
+	message := []byte(subject + "\n" + body)
+
+	username := uc.cfg.SMTP.Username
+	password := uc.cfg.SMTP.Password
+	smtpHost := uc.cfg.SMTP.Host
+	smtpPort := uc.cfg.SMTP.Port
+
+	auth := smtp.PlainAuth("", username, password, smtpHost)
+
+	err := smtp.SendMail(smtpHost+":"+smtpPort, auth, username, to, message)
+
+	if err != nil {
+		info := "Failed to send verification email"
+		uc.log.Error(ctx, header+info, "err", err.Error())
+		return fmt.Errorf(header+info+": %w", ErrSendVerificationEmail)
+	}
+
+	uc.log.Info(ctx, header+"Successfully sent verification email")
+
+	return nil
+}
+
+func (uc *authUseCase) VerifyEmail(ctx context.Context, email string, code string) error {
+	header := "VerifyEmail: "
+
+	uc.log.Info(ctx, header+"Usecase called; Making request to user service (VerifyEmail)", "email", email)
+
+	codeFromCache, err := uc.cache.Get(ctx, email)
+	if err != nil {
+		info := "Failed to get code from cache"
+		uc.log.Error(ctx, header+info, "err", err.Error())
+		return fmt.Errorf(header+info+": %w", ErrGetCodeFromCache)
+	}
+
+	if codeFromCache != code {
+		info := "Invalid code"
+		uc.log.Info(ctx, header+info, "code", code)
+		return fmt.Errorf(header+info+": %w", ErrInvalidCode)
+	}
+
+	uc.cache.Delete(ctx, email)
+
+	user, err := uc.userService.GetUserByEmail(ctx, email)
+	if err != nil {
+		info := "Failed to get user by email"
+		uc.log.Error(ctx, header+info, "err", err.Error())
+		return fmt.Errorf(header+info+": %w", ErrGetUserByEmail)
+	}
+
+	err = uc.userService.UpdateStatusVerified(ctx, user.ID.String(), true)
+	if err != nil {
+		info := "Failed to update user status"
+		uc.log.Error(ctx, header+info, "err", err.Error())
+		return fmt.Errorf(header+info+": %w", ErrUpdateStatusVerified)
+	}
+
+	uc.log.Info(ctx, header+"Successfully verified email")
 
 	return nil
 }

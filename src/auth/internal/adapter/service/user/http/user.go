@@ -131,3 +131,41 @@ func (s *HTTPUserService) UpdatePassword(ctx context.Context, userID, newPasswor
 
 	return nil
 }
+
+func (s *HTTPUserService) UpdateStatusVerified(ctx context.Context, userID string, status bool) error {
+	url := fmt.Sprintf("%s/users", s.baseURL)
+
+	userUUID, err := uuid.Parse(userID)
+	if err != nil {
+		return errors.New("failed to parse user uuid")
+	}
+
+	payload := dto.UpdateStatusVerifiedRequest{
+		ID:            userUUID,
+		EmailVerified: status,
+	}
+
+	jsonBody, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("error marshaling user data: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPut, url, bytes.NewBuffer(jsonBody))
+	if err != nil {
+		return fmt.Errorf("error creating request: %w", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := s.httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("error sending request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("failed to update status verified: status code %d", resp.StatusCode)
+	}
+
+	return nil
+}
