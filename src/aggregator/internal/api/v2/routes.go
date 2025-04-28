@@ -14,6 +14,7 @@ func InitializeV2Routes(router *mux.Router, v1h *v1.AggregatorHandler, v2h *v2.A
 	router.HandleFunc("/api/v2/refresh", v1h.Refresh).Methods("POST")
 	router.HandleFunc("/api/v2/validate", v1h.Validate).Methods("POST")
 	router.HandleFunc("/api/v2/logout", v1h.Logout).Methods("POST")
+	router.HandleFunc("/api/v2/verify-email", v1h.VerifyEmail).Methods("POST")
 
 	routes2FA := router.PathPrefix("/api/v2/2fa").Subrouter()
 	routes2FA.HandleFunc("/validate", v2h.ValidateOTP).Methods("POST")

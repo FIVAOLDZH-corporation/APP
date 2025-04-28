@@ -18,4 +18,5 @@ type AuthUsecase interface {
 	Enabled2FA(ctx context.Context, email string) (bool, error)
 	Logout(ctx context.Context, refreshToken string) error
 	UpdatePassword2FA(ctx context.Context, email, oldPassword, newPassword, otp string) error
+	VerifyEmail(ctx context.Context, email string, code string) error
 }

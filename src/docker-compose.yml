@@ -20,7 +20,8 @@ services:
 
   # Todo Service
   todo:
-    image: ghcr.io/${GITHUB_REPOSITORY}/todo:${VERSION}
+    # image: ghcr.io/${GITHUB_REPOSITORY}/todo:${VERSION}
+    build: ./${TODO_PATH}
     container_name: ${TODO_CONTAINER_NAME}
     ports:
       - ${TODO_EXPOSED_PORT}:${TODO_LOCAL_PORT}
@@ -40,7 +41,8 @@ services:
     image: migrate/migrate
     container_name: todo-migrate-postgres
     volumes:
-      - ./migrations/todo:/migrations
+      - ./${TODO_PATH}/migrations/sql:/migrations
+      # - ./migrations/todo:/migrations
     depends_on:
       todo-postgres:
         condition: service_healthy
@@ -69,7 +71,8 @@ services:
 
   # Auth Service
   auth:
-    image: ghcr.io/${GITHUB_REPOSITORY}/auth:${VERSION}
+    # image: ghcr.io/${GITHUB_REPOSITORY}/auth:${VERSION}
+    build: ./${AUTH_PATH}
     container_name: ${AUTH_CONTAINER_NAME}
     ports:
       - ${AUTH_EXPOSED_PORT}:${AUTH_LOCAL_PORT}
@@ -91,7 +94,8 @@ services:
     image: migrate/migrate
     container_name: auth-migrate-postgres
     volumes:
-      - ./migrations/auth:/migrations
+      - ./${AUTH_PATH}/migrations/sql:/migrations
+      # - ./migrations/auth:/migrations
     depends_on:
       auth-postgres:
         condition: service_healthy
@@ -101,7 +105,8 @@ services:
 
   # Aggregator Service
   aggregator:
-    image: ghcr.io/${GITHUB_REPOSITORY}/aggregator:${VERSION}
+    # image: ghcr.io/${GITHUB_REPOSITORY}/aggregator:${VERSION}
+    build: ./${AGGREGATOR_PATH}
     container_name: ${AGGREGATOR_CONTAINER_NAME}
     ports:
       - ${AGGREGATOR_EXPOSED_PORT}:${AGGREGATOR_LOCAL_PORT}

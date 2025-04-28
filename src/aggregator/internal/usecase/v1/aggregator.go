@@ -46,6 +46,7 @@ var (
 	ErrValidateOTP       error  = errors.New("failed to validate OTP")
 	ErrEnabled2FA        error  = errors.New("failed to check if 2FA is enabled")
 	ErrUpdatePassword2FA error  = errors.New("failed to update password with 2FA")
+	ErrVerifyEmail       error  = errors.New("failed to verify email")
 )
 
 type AggregatorUseCase struct {
@@ -634,6 +635,24 @@ func (uc *AggregatorUseCase) DeleteCard(ctx context.Context, id string) error {
 	}
 
 	uc.log.Info(ctx, header+"Successfully deleted card")
+
+	return nil
+}
+
+func (uc *AggregatorUseCase) VerifyEmail(ctx context.Context, email, code string) error {
+	header := "VerifyEmail: "
+
+	uc.log.Info(ctx, header+"Usecase called; Making request to auth service", "email", email, "code", code)
+
+	err := uc.authSvc.VerifyEmail(ctx, email, code)
+
+	if err != nil {
+		info := "Failed to verify email"
+		uc.log.Error(ctx, header+info, "err", err.Error())
+		return fmt.Errorf(header+info+": %w", ErrVerifyEmail)
+	}
+
+	uc.log.Info(ctx, header+"Successfully verified email")
 
 	return nil
 }

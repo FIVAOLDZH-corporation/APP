@@ -105,3 +105,20 @@ func (h *AuthHandler) LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprintf(w, "Logged out successfully")
 }
+
+func (h *AuthHandler) VerifyEmailHandler(w http.ResponseWriter, r *http.Request) {
+	var req dto.VerifyEmailRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	err := h.authUsecase.VerifyEmail(r.Context(), req.Email, req.Code)
+	if err != nil {
+		http.Error(w, "Invalid email or code", http.StatusUnauthorized)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, "Email verified successfully")
+}

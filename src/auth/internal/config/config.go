@@ -6,11 +6,27 @@ import (
 	"github.com/BurntSushi/toml"
 )
 
+type UsecaseConfig struct {
+	SMTP  SMTPConfig  `toml:"smtp"`
+	Cache CacheConfig `toml:"cache"`
+}
+
 type Config struct {
 	Log        LogConfig        `toml:"log"`
 	Pagination PaginationConfig `toml:"pagination"`
 	User       UserConfig       `toml:"user"`
 	Auth       AuthConfig       `toml:"auth"`
+}
+
+type SMTPConfig struct {
+	Host     string `toml:"host"`
+	Port     string `toml:"port"`
+	Username string `toml:"username"`
+	Password string `toml:"password"`
+}
+
+type CacheConfig struct {
+	TTL int `toml:"ttl"`
 }
 
 type LogConfig struct {
@@ -48,6 +64,8 @@ type AuthConfig struct {
 	Log           LogConfig      `toml:"log"`
 	Postgres      PostgresConfig `toml:"postgres"`
 	Token         TokenConfig    `toml:"token"`
+	SMTP          SMTPConfig     `toml:"smtp"`
+	Cache         CacheConfig    `toml:"cache"`
 }
 
 type PostgresConfig struct {

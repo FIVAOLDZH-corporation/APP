@@ -15,6 +15,7 @@ func InitializeV1Routes(router *mux.Router, aggHandler *v1.AggregatorHandler, au
 	v1router.HandleFunc("/refresh", aggHandler.Refresh).Methods("POST")
 	v1router.HandleFunc("/validate", aggHandler.Validate).Methods("POST")
 	v1router.HandleFunc("/logout", aggHandler.Logout).Methods("POST")
+	v1router.HandleFunc("/verify-email", aggHandler.VerifyEmail).Methods("POST")
 
 	authRoutes := router.PathPrefix("/api/v1").Subrouter()
 	authRoutes.Use(authMiddleware.Middleware)

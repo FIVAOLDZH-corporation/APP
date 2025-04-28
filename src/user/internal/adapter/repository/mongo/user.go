@@ -173,10 +173,11 @@ func (r *MongoUserRepository) UpdateUser(ctx context.Context, user *entity.User)
 
 	update := bson.M{
 		"$set": bson.M{
-			"username":      repoUser.Username,
-			"email":         repoUser.Email,
-			"password_hash": repoUser.PasswordHash,
-			"updated_at":    repoUser.UpdatedAt,
+			"username":       repoUser.Username,
+			"email":          repoUser.Email,
+			"password_hash":  repoUser.PasswordHash,
+			"email_verified": repoUser.EmailVerified,
+			"updated_at":     repoUser.UpdatedAt,
 		},
 	}
 

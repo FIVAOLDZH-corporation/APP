@@ -92,6 +92,7 @@ func (u *userUseCase) CreateUser(ctx context.Context, user entity.User) error {
 
 	user.ID = uuid.New()
 	user.Role = "user"
+	user.EmailVerified = false
 	user.CreatedAt = time.Now()
 	user.UpdatedAt = time.Now()
 
@@ -331,29 +332,32 @@ func (u *userUseCase) UpdateUser(ctx context.Context, user *entity.User) (*entit
 		return nil, err
 	}
 
-	u.log.Info(ctx, header+"Username is valid; validating password")
+	//vXXX: FIXME Todoooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo
+	// u.log.Info(ctx, header+"Username is valid; validating password")
 
 	// TODO: Maybe move password validation to auth service,
 	// and deal only with hashes in user service.
-	err = validatePassword(user.PasswordHash) // NOTE: Plain password, unencrypted initially
 
-	if err != nil {
-		u.log.Info(ctx, header+"Invalid password", "password", user.PasswordHash)
-		return nil, err
-	}
+	// // TODO: Check if password is valid
+	// err = validatePassword(user.PasswordHash) // NOTE: Plain password, unencrypted initially
 
-	u.log.Info(ctx, header+"Password is valid; hashing password")
+	// if err != nil {
+	// 	u.log.Info(ctx, header+"Invalid password", "password", user.PasswordHash)
+	// 	return nil, err
+	// }
 
-	hashedPassword, err := hashPassword(user.PasswordHash)
+	// u.log.Info(ctx, header+"Password is valid; hashing password")
 
-	if err != nil {
-		info := "Unable to hash password"
-		u.log.Error(ctx, header+info, "password", user.PasswordHash, "err", err.Error())
-		return nil, fmt.Errorf(header+info+": %w", ErrHashPassword)
-	}
+	// hashedPassword, err := hashPassword(user.PasswordHash)
 
-	user.PasswordHash = hashedPassword
-	// XXX: end of DRY
+	// if err != nil {
+	// 	info := "Unable to hash password"
+	// 	u.log.Error(ctx, header+info, "password", user.PasswordHash, "err", err.Error())
+	// 	return nil, fmt.Errorf(header+info+": %w", ErrHashPassword)
+	// }
+
+	// user.PasswordHash = hashedPassword
+	// // XXX: end of DRY
 
 	user.UpdatedAt = time.Now()
 
@@ -390,7 +394,7 @@ func (u *userUseCase) DeleteUser(ctx context.Context, id uuid.UUID) error {
 	if existingUser == nil {
 		info := "User does not exist"
 		u.log.Error(ctx, header+info)
-		return errors.New(info)
+		return fmt.Errorf(header+info+": %w", ErrUserNotExist)
 	}
 
 	u.log.Info(ctx, header+"User exists, making request to repo", "id", id)

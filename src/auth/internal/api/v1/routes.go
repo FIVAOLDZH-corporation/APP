@@ -12,4 +12,5 @@ func InitializeV1Routes(router *mux.Router, authHandler *v1.AuthHandler) {
 	router.HandleFunc("/api/v1/refresh", authHandler.RefreshTokenHandler).Methods("POST")
 	router.HandleFunc("/api/v1/validate", authHandler.ValidateTokenHandler).Methods("POST")
 	router.HandleFunc("/api/v1/logout", authHandler.LogoutHandler).Methods("POST")
+	router.HandleFunc("/api/v1/verify-email", authHandler.VerifyEmailHandler).Methods("POST")
 }

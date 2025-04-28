@@ -133,3 +133,19 @@ func (h *AggregatorHandler) UpdatePassword2FA(w http.ResponseWriter, r *http.Req
 		return
 	}
 }
+
+func (h *AggregatorHandler) VerifyEmail(w http.ResponseWriter, r *http.Request) {
+	var req dto.VerifyEmailRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, ErrInvalidRequestBody.Error(), http.StatusBadRequest)
+		return
+	}
+
+	err := h.uc.VerifyEmail(r.Context(), req.Email, req.Code)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
