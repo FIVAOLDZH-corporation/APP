@@ -120,8 +120,8 @@ jobs:
           context: ./src/aggregator
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}/aggregator:${{ github.sha }}
-            ghcr.io/${{ github.repository }}/aggregator:latest
+            ghcr.io/fivaoldzh-corporation/app/aggregator:${{ github.sha }}
+            ghcr.io/fivaoldzh-corporation/app/aggregator:latest
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -132,8 +132,8 @@ jobs:
           context: ./src/auth
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}/auth:${{ github.sha }}
-            ghcr.io/${{ github.repository }}/auth:latest
+            ghcr.io/fivaoldzh-corporation/app/auth:${{ github.sha }}
+            ghcr.io/fivaoldzh-corporation/app/auth:latest
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -144,8 +144,8 @@ jobs:
           context: ./src/todo
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}/todo:${{ github.sha }}
-            ghcr.io/${{ github.repository }}/todo:latest
+            ghcr.io/fivaoldzh-corporation/app/todo:${{ github.sha }}
+            ghcr.io/fivaoldzh-corporation/app/todo:latest
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -156,8 +156,8 @@ jobs:
           context: ./src/user
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}/user:${{ github.sha }}
-            ghcr.io/${{ github.repository }}/user:latest
+            ghcr.io/fivaoldzh-corporation/app/user:${{ github.sha }}
+            ghcr.io/fivaoldzh-corporation/app/user:latest
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -219,13 +219,13 @@ jobs:
           cat > deploy/docker-compose.override.yml << EOF
           services:
             aggregator:
-              image: ghcr.io/${{ github.repository }}/aggregator:${{ env.VERSION }}
+              image: ghcr.io/fivaoldzh-corporation/app/aggregator:${{ env.VERSION }}
             auth:
-              image: ghcr.io/${{ github.repository }}/auth:${{ env.VERSION }}
+              image: ghcr.io/fivaoldzh-corporation/app/auth:${{ env.VERSION }}
             todo:
-              image: ghcr.io/${{ github.repository }}/todo:${{ env.VERSION }}
+              image: ghcr.io/fivaoldzh-corporation/app/todo:${{ env.VERSION }}
             user:
-              image: ghcr.io/${{ github.repository }}/user:${{ env.VERSION }}
+              image: ghcr.io/fivaoldzh-corporation/app/user:${{ env.VERSION }}
           EOF
 
       - name: Generate .env file  # Генерация файла окружения
@@ -343,13 +343,13 @@ jobs:
           cat > deploy/docker-compose.override.yml << EOF
           services:
             aggregator:
-              image: ghcr.io/${{ github.repository }}/aggregator:${{ env.VERSION }}
+              image: ghcr.io/fivaoldzh-corporation/app/aggregator:${{ env.VERSION }}
             auth:
-              image: ghcr.io/${{ github.repository }}/auth:${{ env.VERSION }}
+              image: ghcr.io/fivaoldzh-corporation/app/auth:${{ env.VERSION }}
             todo:
-              image: ghcr.io/${{ github.repository }}/todo:${{ env.VERSION }}
+              image: ghcr.io/fivaoldzh-corporation/app/todo:${{ env.VERSION }}
             user:
-              image: ghcr.io/${{ github.repository }}/user:${{ env.VERSION }}
+              image: ghcr.io/fivaoldzh-corporation/app/user:${{ env.VERSION }}
           EOF
 
       - name: Generate .env file  # Генерация файла окружения
